@@ -1,8 +1,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { BookOpen, Bot, CheckCircle2, CircleStop, Code2, Download, Menu, Moon, PanelLeftClose, PanelRightClose, Play, RefreshCw, Search, Send, Sun } from 'lucide-vue-next'
+import { BookOpen, Bot, CheckCircle2, CircleStop, Code2, Download, Github, Menu, Moon, PanelLeftClose, PanelRightClose, Play, RefreshCw, Search, Send, Sun } from 'lucide-vue-next'
 import AppToast from './components/AppToast.vue'
 import TableOfContents from './components/TableOfContents.vue'
+import AuthorCredit from './components/AuthorCredit.vue'
 import { createProject, getProject, getProjects, getReport, regenerateProject } from './lib/api'
 import { renderMarkdown, extractHeadings } from './composables/useMarkdown'
 import { useTheme } from './composables/useTheme'
@@ -246,6 +247,7 @@ async function askQuestion() {
           </button>
         </div>
       </header>
+      <AuthorCredit />
 
       <form class="repo-form" @submit.prevent="startAnalysis">
         <label for="repo-url">GitHub 仓库</label>

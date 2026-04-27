@@ -1,8 +1,61 @@
-# project-helper 项目文档
+# project-helper 🍊
 
-`project-helper` 是一个面向源码初学者的项目学习助手。它允许用户输入公开 GitHub 仓库地址，后端自动解析仓库、克隆源码、建立文件索引，并调用 DeepSeek 生成中文 Markdown 源码分析报告；前端提供仓库分析工作台、历史项目、实时进度、报告阅读和基于源码上下文的流式问答。
+面向源码初学者的项目学习助手。输入公开 GitHub 仓库地址，自动克隆源码、建立索引，调用 DeepSeek 生成中文 Markdown 阅读地图，并支持基于源码上下文的流式问答。
 
-当前实现是前后端分离架构：
+## 快速开始
+
+### 环境要求
+
+- Go 1.24+
+- Node.js 18+ & npm
+- DeepSeek API Key
+
+### 一键启动
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/orangelab-dev/project-helper.git
+cd project-helper
+
+# 2. 配置 API Key
+cp .env-example .env
+# 编辑 .env，填入你的 DEEPSEEK_API_KEY
+vim .env
+
+# 3. 一键启动
+./start.sh
+```
+
+启动后打开 **http://localhost:5173** 即可使用。
+
+脚本会自动检查依赖、安装前端包、同时启动前后端服务，按 `Ctrl+C` 停止。
+
+### 手动启动
+
+如果需要分别启动前后端：
+
+```bash
+# 安装前端依赖
+cd frontend && npm install && cd ..
+
+# 启动后端（默认 :8080）
+go run ./cmd/server
+
+# 启动前端（默认 :5173，另一个终端）
+cd frontend && npm run dev
+```
+
+### 使用方式
+
+1. 在左侧输入框粘贴公开 GitHub 仓库地址，如 `https://github.com/gin-gonic/gin`
+2. 点击「开始分析」，等待进度条走完
+3. 报告生成后可在「阅读地图」区浏览，点击目录标题可跳转
+4. 在右侧「源码问答」区输入问题，如"请求是怎么流转的？"
+5. 支持亮色/暗色主题切换，左侧栏和右侧问答面板均可折叠
+
+---
+
+## 技术架构
 
 - 后端：Go、Gin、database/sql、modernc.org/sqlite、go-git、CloudWeGo Eino schema 适配、DeepSeek Chat Completions API。
 - 前端：Vue 3 Composition API、Vite、MarkdownIt、highlight.js、lucide-vue-next。
