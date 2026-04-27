@@ -1,0 +1,12 @@
+.env
+data/
+frontend/node_modules/
+frontend/dist/
+tmp/
+*.log
+data/logs/
+.DS_Store
+.idea/
+.codex/
+coverage.out
+bin/
