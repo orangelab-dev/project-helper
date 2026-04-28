@@ -9,7 +9,7 @@
 如果你只是想使用 project-helper，不需要自己安装 Go、Node.js 或编译源码，推荐直接下载已打包好的版本：
 **[下载 project-helper v1.0.0](https://github.com/orangelab-dev/project-helper/releases/tag/v1.0.0)**
 
-**注意：** 下载源码过程需要连接到 github，如果使用 VPN 的话请打开"虚拟网卡模式"或“TUN 模式”
+- **注意：** 下载源码过程需要连接到 github，如果使用 VPN 的话请打开"虚拟网卡模式"或“TUN 模式”
 
 Release 中提供 macOS 和 Windows 版本。下载后把可执行文件、启动脚本和 `.env` 放在同一个文件夹，编辑 `.env` 填入 `DEEPSEEK_API_KEY`，再运行对应平台的启动脚本即可。
 
