@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"project-helper/frontend"
 	"project-helper/internal/ai"
 	"project-helper/internal/analyzer"
 	"project-helper/internal/config"
@@ -48,7 +49,15 @@ func main() {
 	deepseek := ai.NewDeepSeekClient(cfg.DeepSeek)
 	an := analyzer.New(st, repoSvc, deepseek, cfg.ReportsDir)
 
-	router := httpapi.NewRouter(cfg, st, an, deepseek)
+	frontendFS, frontendEnabled, err := frontend.Dist()
+	if err != nil {
+		log.Fatalf("load frontend assets: %v", err)
+	}
+	if frontendEnabled {
+		log.Printf("embedded frontend enabled")
+	}
+
+	router := httpapi.NewRouter(cfg, st, an, deepseek, frontendFS)
 	srv := &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           router,

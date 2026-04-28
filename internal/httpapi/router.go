@@ -3,8 +3,12 @@ package httpapi
 import (
 	"errors"
 	"io"
+	"io/fs"
+	"mime"
 	"net/http"
+	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -25,7 +29,7 @@ type API struct {
 	agent    *agent.Agent
 }
 
-func NewRouter(cfg config.Config, st *store.Store, an *analyzer.Analyzer, aiClient ai.Client) *gin.Engine {
+func NewRouter(cfg config.Config, st *store.Store, an *analyzer.Analyzer, aiClient ai.Client, frontendFS fs.FS) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
@@ -51,7 +55,56 @@ func NewRouter(cfg config.Config, st *store.Store, an *analyzer.Analyzer, aiClie
 		group.POST("/projects/:id/regenerate", api.regenerateProject)
 		group.POST("/projects/:id/chat/stream", api.chatStream)
 	}
+	mountFrontend(r, frontendFS)
 	return r
+}
+
+func mountFrontend(r *gin.Engine, frontendFS fs.FS) {
+	if frontendFS == nil {
+		return
+	}
+	r.NoRoute(func(c *gin.Context) {
+		requestPath := c.Request.URL.Path
+		if requestPath == "/api" || strings.HasPrefix(requestPath, "/api/") {
+			errorJSON(c, http.StatusNotFound, errors.New("接口不存在"))
+			return
+		}
+		if c.Request.Method != http.MethodGet && c.Request.Method != http.MethodHead {
+			c.Status(http.StatusNotFound)
+			return
+		}
+
+		filePath := strings.TrimPrefix(path.Clean("/"+requestPath), "/")
+		if filePath == "" || filePath == "." {
+			filePath = "index.html"
+		}
+		if serveFrontendFile(c, frontendFS, filePath) {
+			return
+		}
+		if serveFrontendFile(c, frontendFS, "index.html") {
+			return
+		}
+		c.Status(http.StatusNotFound)
+	})
+}
+
+func serveFrontendFile(c *gin.Context, frontendFS fs.FS, name string) bool {
+	content, err := fs.ReadFile(frontendFS, name)
+	if err != nil {
+		return false
+	}
+	contentType := mime.TypeByExtension(path.Ext(name))
+	if contentType == "" {
+		contentType = http.DetectContentType(content)
+	}
+	c.Header("Content-Type", contentType)
+	c.Header("Content-Length", strconv.Itoa(len(content)))
+	if c.Request.Method == http.MethodHead {
+		c.Status(http.StatusOK)
+		return true
+	}
+	c.Data(http.StatusOK, contentType, content)
+	return true
 }
 
 func (a *API) health(c *gin.Context) {

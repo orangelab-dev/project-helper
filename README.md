@@ -30,6 +30,19 @@ vim .env
 
 脚本会自动检查依赖、安装前端包、同时启动前后端服务，按 `Ctrl+C` 停止。
 
+### 生产单文件构建
+
+如果希望把前端打包进后端，生成一个可直接运行的二进制文件：
+
+```bash
+./build.sh
+./bin/project-helper
+```
+
+构建脚本会先执行 `frontend` 的生产构建，再使用 `go build -tags prod` 把 `frontend/dist` 嵌入后端。启动后打开 **http://localhost:8080** 即可使用，不需要再单独启动 Vite。
+
+生产构建阶段需要 Go、Node.js 和 npm；运行 `bin/project-helper` 时只需要生成好的二进制文件、`.env` 配置和运行时数据目录。
+
 ### 手动启动
 
 如果需要分别启动前后端：
@@ -120,6 +133,7 @@ cd frontend && npm run dev
 export DEEPSEEK_API_KEY=你的_key
 export DEEPSEEK_MODEL=deepseek-v4-pro
 export DEEPSEEK_BASE_URL=https://api.deepseek.com
+export SERVER_PORT=8080
 ```
 
 可选配置：
@@ -132,6 +146,8 @@ export REPORTS_DIR=data/reports
 export LOG_PATH=data/logs/server.log
 export FRONTEND_URL=http://localhost:5173
 ```
+
+如果只是想换端口，推荐改 `SERVER_PORT`，例如 `export SERVER_PORT=9090` 后访问 `http://localhost:9090`。`SERVER_ADDR` 适合需要绑定完整地址的场景，例如 `export SERVER_ADDR=127.0.0.1:9090`；如果同时配置，`SERVER_ADDR` 优先。
 
 安全注意：
 

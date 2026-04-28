@@ -27,7 +27,7 @@ func Load(envPath string) (Config, error) {
 	_ = loadDotEnv(envPath)
 
 	cfg := Config{
-		Addr:         envOrDefault("SERVER_ADDR", ":8080"),
+		Addr:         serverAddr(),
 		DatabasePath: envOrDefault("DATABASE_PATH", filepath.Join("data", "project-helper.db")),
 		ReposDir:     envOrDefault("REPOS_DIR", filepath.Join("data", "repos")),
 		ReportsDir:   envOrDefault("REPORTS_DIR", filepath.Join("data", "reports")),
@@ -77,4 +77,15 @@ func envOrDefault(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func serverAddr() string {
+	if addr := os.Getenv("SERVER_ADDR"); addr != "" {
+		return addr
+	}
+	port := envOrDefault("SERVER_PORT", "8080")
+	if strings.HasPrefix(port, ":") {
+		return port
+	}
+	return ":" + port
 }
