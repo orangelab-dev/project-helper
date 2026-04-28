@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { BookOpen, Bot, CheckCircle2, CircleStop, Code2, Download, Github, Menu, Moon, PanelLeftClose, PanelRightClose, Play, RefreshCw, Search, Send, Sun } from 'lucide-vue-next'
+import { BookOpen, Bot, CheckCircle2, ChevronDown, ChevronRight, CircleStop, Code2, Download, Github, Maximize2, Menu, Minimize2, Moon, PanelLeftClose, PanelRightClose, Play, RefreshCw, Search, Send, Sun } from 'lucide-vue-next'
 import AppToast from './components/AppToast.vue'
 import TableOfContents from './components/TableOfContents.vue'
 import AuthorCredit from './components/AuthorCredit.vue'
@@ -21,6 +21,10 @@ const projectError = ref('')
 const question = ref('')
 const sidebarCollapsed = ref(false)
 const assistantCollapsed = ref(false)
+const assistantExpanded = ref(false)
+const toolsExpanded = ref(false)
+const reportingActive = ref(false)
+const reportStreamingStarted = ref(false)
 const { isDark, toggleTheme } = useTheme()
 const { showToast } = useToast()
 const projectStream = useProjectStream()
@@ -52,6 +56,9 @@ const currentStep = computed(() => activeRun.value?.step || activeRun.value?.eve
 const currentStepTitle = computed(() => stepLabels[currentStep.value] || statusLabels[currentStep.value] || '等待开始')
 const statusText = computed(() => activeRun.value?.message || statusLabels[selectedProject.value?.status] || '选择仓库后开始分析')
 const isAnalyzing = computed(() => projectStream.connected.value || selectedProject.value?.status === 'running' || selectedProject.value?.status === 'queued')
+const reportStatusText = computed(() => reportStreamingStarted.value
+  ? '阅读地图生成中...'
+  : '模型正在阅读源码上下文，稍后会开始输出阅读地图...')
 const placeholderReport = computed(() => selectedProject.value
   ? '# 报告生成中\n\n分析完成后，这里会出现完整源码阅读报告。'
   : '# 选择或输入一个仓库\n\n输入公开 GitHub 仓库地址后，project-helper 会克隆源码、建立索引并生成中文报告。')
@@ -113,20 +120,40 @@ async function regenerateAnalysis() {
 }
 
 function watchAnalysis(projectId) {
-  projectStream.connect(projectId, async (eventName) => {
-    await refreshSelected()
-    if (eventName === 'done') {
-      await loadReport()
-      showToast('阅读地图已生成')
+  projectStream.connect(
+    projectId,
+    async (eventName) => {
+      await refreshSelected()
+      if (eventName === 'done' || eventName === 'error') {
+        reportingActive.value = false
+        reportStreamingStarted.value = false
+      }
+      if (eventName === 'done') {
+        await loadReport()
+        showToast('阅读地图已生成')
+      }
+      if (eventName === 'error') showToast('分析失败，请查看当前步骤提示', 'error')
+      await loadProjects()
+    },
+    (eventName, data) => {
+      if (eventName === 'reporting') {
+        reportingActive.value = true
+        reportStreamingStarted.value = false
+        report.value = ''
+      }
+      if (eventName === 'report_token') {
+        reportStreamingStarted.value = true
+        report.value += data.data || ''
+      }
     }
-    if (eventName === 'error') showToast('分析失败，请查看当前步骤提示', 'error')
-    await loadProjects()
-  })
+  )
 }
 
 async function selectProject(project, notify = true) {
   selectedProject.value = project
   report.value = ''
+  reportingActive.value = false
+  reportStreamingStarted.value = false
   projectStream.disconnect()
   await refreshSelected()
   if (selectedProject.value?.has_report) await loadReport()
@@ -206,12 +233,22 @@ function expandSidebar() {
 
 function collapseAssistant() {
   assistantCollapsed.value = true
+  assistantExpanded.value = false
   showToast('右侧问答面板已隐藏')
 }
 
 function expandAssistant() {
   assistantCollapsed.value = false
   showToast('右侧问答面板已显示')
+}
+
+function toggleAssistantExpanded() {
+  assistantExpanded.value = !assistantExpanded.value
+  showToast(assistantExpanded.value ? '问答面板已扩大' : '问答面板已恢复')
+}
+
+function toggleToolsExpanded() {
+  toolsExpanded.value = !toolsExpanded.value
 }
 
 function stopAnswer() {
@@ -229,7 +266,14 @@ async function askQuestion() {
 </script>
 
 <template>
-  <div class="app-shell" :class="{ 'sidebar-collapsed': sidebarCollapsed, 'assistant-collapsed': assistantCollapsed }">
+  <div
+    class="app-shell"
+    :class="{
+      'sidebar-collapsed': sidebarCollapsed,
+      'assistant-collapsed': assistantCollapsed,
+      'assistant-expanded': assistantExpanded
+    }"
+  >
     <aside class="sidebar" aria-label="项目导航">
       <header class="brand-row">
         <div class="brand-mark" aria-hidden="true"><Code2 :size="22" /></div>
@@ -296,12 +340,11 @@ async function askQuestion() {
             <Menu :size="18" />
           </button>
           <div>
-            <p class="eyebrow">分析进度</p>
+            <p class="eyebrow">正在学习：</p>
             <h2>{{ selectedProject ? `${selectedProject.owner}/${selectedProject.name}` : '等待仓库' }}</h2>
           </div>
         </div>
         <div class="progress-wrap" aria-live="polite">
-          <p class="step-kicker">当前步骤</p>
           <strong>{{ currentStepTitle }}</strong>
           <span>{{ statusText }}</span>
         </div>
@@ -347,6 +390,10 @@ async function askQuestion() {
             </div>
           </div>
           <TableOfContents :headings="tocHeadings" />
+          <div v-if="reportingActive" class="report-status" role="status" aria-live="polite">
+            <RefreshCw :size="16" aria-hidden="true" />
+            <span>{{ reportStatusText }}</span>
+          </div>
           <div class="markdown-body" v-html="renderedReport"></div>
         </article>
 
@@ -360,19 +407,44 @@ async function askQuestion() {
               <button v-if="chat.loading.value" class="icon-button danger" type="button" aria-label="停止生成" @click="stopAnswer">
                 <CircleStop :size="18" />
               </button>
+              <button
+                class="icon-button"
+                type="button"
+                :aria-label="assistantExpanded ? '恢复问答面板' : '扩大问答面板'"
+                @click="toggleAssistantExpanded"
+              >
+                <Minimize2 v-if="assistantExpanded" :size="18" />
+                <Maximize2 v-else :size="18" />
+              </button>
               <button class="icon-button" type="button" aria-label="隐藏问答面板" @click="collapseAssistant">
                 <PanelRightClose :size="18" />
               </button>
             </div>
           </div>
 
-          <div class="tool-timeline" aria-label="工具调用记录">
-            <div v-for="(item, index) in chat.toolEvents.value" :key="index" class="tool-event">
-              <CheckCircle2 :size="15" />
-              <span>{{ item.name || item.event }}</span>
-              <code>{{ item.data }}</code>
+          <section class="tool-panel" aria-label="工具调用记录">
+            <button
+              class="tool-toggle"
+              type="button"
+              :aria-expanded="toolsExpanded"
+              @click="toggleToolsExpanded"
+            >
+              <span>
+                <ChevronDown v-if="toolsExpanded" :size="15" />
+                <ChevronRight v-else :size="15" />
+                工具记录
+              </span>
+              <strong>{{ chat.toolEvents.value.length }}</strong>
+            </button>
+            <div v-if="toolsExpanded" class="tool-timeline">
+              <div v-for="(item, index) in chat.toolEvents.value" :key="index" class="tool-event">
+                <CheckCircle2 :size="15" />
+                <span>{{ item.name || item.event }}</span>
+                <code>{{ item.data }}</code>
+              </div>
+              <p v-if="!chat.toolEvents.value.length" class="empty-state compact">暂无工具调用</p>
             </div>
-          </div>
+          </section>
 
           <div class="answer-box" aria-live="polite">
             <div v-if="chat.answer.value" class="markdown-body small" v-html="renderMarkdown(chat.answer.value)"></div>

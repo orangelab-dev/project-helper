@@ -126,14 +126,25 @@ func (a *Analyzer) run(ctx context.Context, runID, projectID int64, parsed repo.
 	contextText := buildAnalysisContext(parsed, rev, root, files, tree, techStack)
 
 	progress("reporting", 82, "正在调用 DeepSeek 生成通俗分析报告")
-	report, err := a.ai.Generate(ctx, []ai.Message{
+	reportStream, reportErrs := a.ai.Stream(ctx, []ai.Message{
 		{Role: "system", Content: reportSystemPrompt()},
 		{Role: "user", Content: contextText},
 	})
-	if err != nil {
-		fail("reporting", err)
-		return
+	var reportBuilder strings.Builder
+	for event := range reportStream {
+		if event.Type != "token" || event.Data == "" {
+			continue
+		}
+		reportBuilder.WriteString(event.Data)
+		a.hub.publish(projectID, Event{Type: "report_token", Step: "reporting", Progress: 82, Data: event.Data})
 	}
+	for err := range reportErrs {
+		if err != nil {
+			fail("reporting", err)
+			return
+		}
+	}
+	report := reportBuilder.String()
 	if strings.TrimSpace(report) == "" {
 		fail("reporting", fmt.Errorf("模型返回了空报告"))
 		return
