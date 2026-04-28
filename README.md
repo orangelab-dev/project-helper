@@ -7,6 +7,7 @@
 ### 直接使用
 
 如果你只是想使用 project-helper，不需要自己安装 Go、Node.js 或编译源码，推荐直接下载已打包好的版本：
+**注意：** 下载源码过程需要连接到 github，如果使用 VPN 的话请打开"虚拟网卡模式"或“TUN 模式”
 
 **[下载 project-helper v1.0.0](https://github.com/orangelab-dev/project-helper/releases/tag/v1.0.0)**
 
