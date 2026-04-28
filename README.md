@@ -4,13 +4,23 @@
 
 ## 快速开始
 
-### 环境要求
+### 直接使用
+
+如果你只是想使用 project-helper，不需要自己安装 Go、Node.js 或编译源码，推荐直接下载已打包好的版本：
+
+**[下载 project-helper v1.0.0](https://github.com/orangelab-dev/project-helper/releases/tag/v1.0.0)**
+
+Release 中提供 macOS 和 Windows 版本。下载后把可执行文件、启动脚本和 `.env` 放在同一个文件夹，编辑 `.env` 填入 `DEEPSEEK_API_KEY`，再运行对应平台的启动脚本即可。
+
+### 从源码运行
+
+#### 环境要求
 
 - Go 1.24+
 - Node.js 18+ & npm
 - DeepSeek API Key
 
-### 一键启动
+#### 一键启动
 
 ```bash
 # 1. 克隆项目
@@ -30,7 +40,7 @@ vim .env
 
 脚本会自动检查依赖、安装前端包、同时启动前后端服务，按 `Ctrl+C` 停止。
 
-### 生产单文件构建
+#### 生产单文件构建
 
 如果希望把前端打包进后端，生成一个可直接运行的二进制文件：
 
@@ -43,7 +53,7 @@ vim .env
 
 生产构建阶段需要 Go、Node.js 和 npm；运行 `bin/project-helper` 时只需要生成好的二进制文件、`.env` 配置和运行时数据目录。
 
-### 手动启动
+#### 手动启动
 
 如果需要分别启动前后端：
 
